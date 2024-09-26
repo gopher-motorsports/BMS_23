@@ -39,7 +39,7 @@ uint32_t numBmbs = 0;
 static uint32_t initRetries = 5;
 static uint32_t lastUpdateMain = 0;
 
-bool balancingEnabled = false;
+// bool balancingEnabled = false;
 uint32_t lastBalancingUpdate = 0;
 
 /* ==================================================================== */
@@ -80,65 +80,62 @@ void runMain()
 		// Retry initializing the BMBs
 		initBatteryPack(&numBmbs);
 	}
-	else
+
+	updateTractiveCurrent();
+
+	updateStateOfChargeAndEnergy();
+	
+	updatePackData(numBmbs);
+
+	updateGopherCan();
+
+	updateImdStatus();
+
+	updateEpaper();
+
+	checkForNewChargerInfo();
+
+	chargeAccumulator();
+
+	checkAndHandleAlerts();
+
+	if (leakyBucketFilled(&asciCommsLeakyBucket))
 	{
-		updateTractiveCurrent();
+		gBms.bmsHwState = BMS_BMB_FAILURE;
+	}
 
-		updateStateOfChargeAndEnergy();
-		
-		updatePackData(numBmbs);
+	if((HAL_GetTick() - lastUpdateMain) >= 1000)
+	{
+		// Clear console
+		printf("\e[1;1H\e[2J");
 
-		updateGopherCan();
+		// if(balancingEnabled)
+		// {
+		// 	printf("Balancing Enabled: TRUE\n");
+		// }
+		// else
+		// {
+		// 	printf("Balancing Enabled: FALSE\n");
+		// }
+		balancePack(numBmbs, gBms.chargerConnected);
+		// balancePackToVoltage(numBmbs, 3.87f);
 
-		updateImdStatus();
-
-		updateEpaper();
-
-		checkForNewChargerInfo();
-
-		// chargeAccumulator();
-
-		checkAndHandleAlerts();
-
-		if (leakyBucketFilled(&asciCommsLeakyBucket))
-		{
-			gBms.bmsHwState = BMS_BMB_FAILURE;
-		}
-
-		if((HAL_GetTick() - lastUpdateMain) >= 1000)
-		{
-			// Clear console
-			printf("\e[1;1H\e[2J");
-
-			if(balancingEnabled)
-			{
-				printf("Balancing Enabled: TRUE\n");
-			}
-			else
-			{
-				printf("Balancing Enabled: FALSE\n");
-			}
-			balancePack(numBmbs, balancingEnabled);
-			// balancePackToVoltage(numBmbs, 3.87f);
-
-			printCellVoltages();
-			printCellTemperatures();
-			// printInternalResistances();
-			printBoardTemperatures();
-			printActiveAlerts();
-			printSocAndSoe();
-			printImdState();
-			printChargerData();
+		printCellVoltages();
+		printCellTemperatures();
+		// printInternalResistances();
+		printBoardTemperatures();
+		printActiveAlerts();
+		printSocAndSoe();
+		printImdState();
+		printChargerData();
 
 
-			printf("Leaky bucket filled: %d\n\n", leakyBucketFilled(&asciCommsLeakyBucket));
+		printf("Leaky bucket filled: %d\n\n", leakyBucketFilled(&asciCommsLeakyBucket));
 
-			printf("Tractive Current: %6.3f\n", (double)gBms.tractiveSystemCurrent);
+		printf("Tractive Current: %6.3f\n", (double)gBms.tractiveSystemCurrent);
 
-			// Update lastUpdate
-			lastUpdateMain = HAL_GetTick();
-		}
-
+		// Update lastUpdate
+		lastUpdateMain = HAL_GetTick();
 	}
 
 	// New functions to add UpdateBrickVoltages() - reads in all brick voltages
